@@ -5,7 +5,7 @@ on:
     branches:
       - main
     paths:
-      - 'your-folder/**'  # Trigger workflow when files change in this folder
+      - 'test/**'  # Trigger workflow when files change in this folder
 
 jobs:
   upload:
