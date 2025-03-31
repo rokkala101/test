@@ -15,13 +15,19 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-
-      - name: Identify Newly Added or Modified Files
-        id: new_files
+      - name: Debug Git Diff
         run: |
           git fetch origin main --depth=2
-          git diff --name-only HEAD^ HEAD --diff-filter=A > new_files.txt  # A = Added files
-          echo "NEW_FILES=$(cat new_files.txt)" >> $GITHUB_ENV
+          git log --oneline -2
+          git diff --name-status HEAD^ HEAD
+
+      - name: Get New and Modified Files
+        id: changed_files
+        run: |
+          git fetch origin main --depth=2
+          git diff --name-only --diff-filter=AM HEAD^ HEAD > new_files.txt || touch new_files.txt
+          echo "CHANGED_FILES=$(cat new_files.txt)" >> $GITHUB_ENV
+
           
           
       - name: Print New Files
