@@ -19,21 +19,26 @@ jobs:
         id: new_files
         run: |
           git fetch origin main
-          git diff --name-only HEAD^ HEAD > new_files.txt
-          echo "NEW_FILES=$(cat new_files.txt)" >> $GITHUB_ENV
+          NEW_FILES=$(git diff --name-only HEAD^ HEAD | grep '^your-folder/')
+          echo "NEW_FILES=$NEW_FILES" >> $GITHUB_ENV
 
       - name: Print New Files
-        run: echo "New files to upload: $NEW_FILES"
+        run: echo "New files to upload: ${{ env.NEW_FILES }}"
 
       - name: Install SSH Client
         run: sudo apt-get install -y openssh-client sshpass
 
       - name: Upload Only New Files to Azure VM
         run: |
-          for file in $NEW_FILES; do
-            sshpass -p "${{ secrets.AZURE_VM_PASSWORD }}" scp -o StrictHostKeyChecking=no $file ${{ secrets.AZURE_VM_USERNAME }}@${{ secrets.AZURE_VM_IP }}:/home/${{ secrets.AZURE_VM_USERNAME }}/uploads/
-          done
+          if [ -n "${{ env.NEW_FILES }}" ]; then
+            for file in ${{ env.NEW_FILES }}; do
+              sshpass -p "${{ secrets.AZURE_VM_PASSWORD }}" scp -o StrictHostKeyChecking=no "$file" "${{ secrets.AZURE_VM_USERNAME }}@${{ secrets.AZURE_VM_IP }}:/home/${{ secrets.AZURE_VM_USERNAME }}/uploads/"
+            done
+          else
+            echo "No new files to upload."
+          fi
 
       - name: Run Python Processing Script on Azure VM
+        if: env.NEW_FILES != ''
         run: |
           sshpass -p "${{ secrets.AZURE_VM_PASSWORD }}" ssh -o StrictHostKeyChecking=no ${{ secrets.AZURE_VM_USERNAME }}@${{ secrets.AZURE_VM_IP }} "python3 /home/${{ secrets.AZURE_VM_USERNAME }}/process_file.py"
