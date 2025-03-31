@@ -27,7 +27,6 @@ jobs:
           git fetch origin main --depth=2
           git diff --name-only --diff-filter=AM HEAD^ HEAD > new_files.txt || touch new_files.txt
           echo "CHANGED_FILES=$(cat new_files.txt)" >> $GITHUB_ENV
-
           
           
       - name: Print New Files
@@ -38,14 +37,16 @@ jobs:
       - name: Install SSH Client
         run: sudo apt-get install -y openssh-client sshpass
 
-      - name: Upload Only New Files to Azure VM
-        if: env.NEW_FILES != ''
+      - name: Upload New and Modified Files to Azure VM
         run: |
-          for file in ${{ env.NEW_FILES }}; do
-            sshpass -p "${{ secrets.AZURE_VM_PASSWORD }}" scp -o StrictHostKeyChecking=no "$file" "${{ secrets.AZURE_VM_USERNAME }}@${{ secrets.AZURE_VM_IP }}:/home/${{ secrets.AZURE_VM_USERNAME }}/uploads/"
-          done
+          while IFS= read -r file; do
+            if [[ -n "$file" ]]; then
+              echo "Uploading: $file"
+              sshpass -p "${{ secrets.AZURE_VM_PASSWORD }}" scp -o StrictHostKeyChecking=no "$file" "${{ secrets.AZURE_VM_USERNAME }}@${{ secrets.AZURE_VM_IP }}:/home/${{ secrets.AZURE_VM_USERNAME }}/uploads/"
+            fi
+          done < new_files.txt
 
       - name: Run Python Processing Script on Azure VM
-        if: env.NEW_FILES != ''
+        if: success()
         run: |
           sshpass -p "${{ secrets.AZURE_VM_PASSWORD }}" ssh -o StrictHostKeyChecking=no "${{ secrets.AZURE_VM_USERNAME }}@${{ secrets.AZURE_VM_IP }}" "python3 /home/${{ secrets.AZURE_VM_USERNAME }}/process_file.py"
