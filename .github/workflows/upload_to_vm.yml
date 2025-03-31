@@ -1,0 +1,31 @@
+name: Upload and Process Latest File on Azure VM
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'your-folder/**'  # Trigger workflow when files change in this folder
+
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install SSH Client
+        run: sudo apt-get install -y openssh-client
+
+      - name: Upload File to Azure VM via SCP (Password Authentication)
+        run: |
+          sshpass -p "${{ secrets.AZURE_VM_PASSWORD }}" scp -o StrictHostKeyChecking=no -r your-folder/* ${{ secrets.AZURE_VM_USERNAME }}@${{ secrets.AZURE_VM_IP }}:/home/${{ secrets.AZURE_VM_USERNAME }}/uploads/
+
+      - name: Run Python Processing Script on Azure VM
+        run: |
+          sshpass -p "${{ secrets.AZURE_VM_PASSWORD }}" ssh -o StrictHostKeyChecking=no ${{ secrets.AZURE_VM_USERNAME }}@${{ secrets.AZURE_VM_IP }} "python3 /home/${{ secrets.AZURE_VM_USERNAME }}/process_file.py"
+
+      - name: Verify Processed Files
+        run: |
+          sshpass -p "${{ secrets.AZURE_VM_PASSWORD }}" ssh -o StrictHostKeyChecking=no ${{ secrets.AZURE_VM_USERNAME }}@${{ secrets.AZURE_VM_IP }} "ls -lah /home/${{ secrets.AZURE_VM_USERNAME }}/processed"
