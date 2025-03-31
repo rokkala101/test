@@ -20,7 +20,7 @@ jobs:
 
       - name: Upload File to Azure VM via SCP (Password Authentication)
         run: |
-          sshpass -p "${{ secrets.AZURE_VM_PASSWORD }}" scp -o StrictHostKeyChecking=no -r your-folder/* ${{ secrets.AZURE_VM_USERNAME }}@${{ secrets.AZURE_VM_IP }}:/home/${{ secrets.AZURE_VM_USERNAME }}/uploads/
+          sshpass -p "${{ secrets.AZURE_VM_PASSWORD }}" scp -o StrictHostKeyChecking=no -r test/* ${{ secrets.AZURE_VM_USERNAME }}@${{ secrets.AZURE_VM_IP }}:/home/${{ secrets.AZURE_VM_USERNAME }}/uploads/
 
       - name: Run Python Processing Script on Azure VM
         run: |
