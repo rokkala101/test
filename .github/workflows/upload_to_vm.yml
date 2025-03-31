@@ -1,11 +1,11 @@
-name: Upload and Process Latest File on Azure VM
+name: Upload and Process Only New Files on Azure VM
 
 on:
   push:
     branches:
       - main
     paths:
-      - 'test/**'  # Trigger workflow when files change in this folder
+      - 'test/**'  # Monitor changes in this folder
 
 jobs:
   upload:
@@ -15,17 +15,25 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Install SSH Client
-        run: sudo apt-get install -y openssh-client
-
-      - name: Upload File to Azure VM via SCP (Password Authentication)
+      - name: Get Newly Added Files
+        id: new_files
         run: |
-          sshpass -p "${{ secrets.AZURE_VM_PASSWORD }}" scp -o StrictHostKeyChecking=no -r test/* ${{ secrets.AZURE_VM_USERNAME }}@${{ secrets.AZURE_VM_IP }}:/home/${{ secrets.AZURE_VM_USERNAME }}/uploads/
+          git fetch origin main
+          git diff --name-only HEAD^ HEAD > new_files.txt
+          echo "NEW_FILES=$(cat new_files.txt)" >> $GITHUB_ENV
+
+      - name: Print New Files
+        run: echo "New files to upload: $NEW_FILES"
+
+      - name: Install SSH Client
+        run: sudo apt-get install -y openssh-client sshpass
+
+      - name: Upload Only New Files to Azure VM
+        run: |
+          for file in $NEW_FILES; do
+            sshpass -p "${{ secrets.AZURE_VM_PASSWORD }}" scp -o StrictHostKeyChecking=no $file ${{ secrets.AZURE_VM_USERNAME }}@${{ secrets.AZURE_VM_IP }}:/home/${{ secrets.AZURE_VM_USERNAME }}/uploads/
+          done
 
       - name: Run Python Processing Script on Azure VM
         run: |
           sshpass -p "${{ secrets.AZURE_VM_PASSWORD }}" ssh -o StrictHostKeyChecking=no ${{ secrets.AZURE_VM_USERNAME }}@${{ secrets.AZURE_VM_IP }} "python3 /home/${{ secrets.AZURE_VM_USERNAME }}/process_file.py"
-
-      - name: Verify Processed Files
-        run: |
-          sshpass -p "${{ secrets.AZURE_VM_PASSWORD }}" ssh -o StrictHostKeyChecking=no ${{ secrets.AZURE_VM_USERNAME }}@${{ secrets.AZURE_VM_IP }} "ls -lah /home/${{ secrets.AZURE_VM_USERNAME }}/processed"
