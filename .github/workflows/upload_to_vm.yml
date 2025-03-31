@@ -19,13 +19,15 @@ jobs:
         id: new_files
         run: |
           git fetch origin main --depth=2
-          NEW_FILES=$(git diff --name-only HEAD^ HEAD | grep '^your-folder/' || true)
+          git diff --name-only HEAD^ HEAD | grep '^your-folder/' || true > new_files.txt
           echo "NEW_FILES<<EOF" >> $GITHUB_ENV
-          echo "$NEW_FILES" >> $GITHUB_ENV
+          cat new_files.txt >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
-
+          
       - name: Print New Files
-        run: echo "New files to upload: ${{ env.NEW_FILES }}"
+        run: |
+          echo "New files to upload:"
+          cat new_files.txt
 
       - name: Install SSH Client
         run: sudo apt-get install -y openssh-client sshpass
